@@ -35,26 +35,34 @@ class Webhook implements ShouldQueue
     {
         Log::info('Webhook job: start');
 
-        try {
-            $url = 'localhost';
+        // $url = 'http://127.0.0.1:5050/receive';
+        // Docker for Macの場合、ホストマシンを指すIPアドレスは host.docker.internal
+        $url = 'http://host.docker.internal:5050/receive';
+        $data = [
+            'post_id' => $this->post->id,
+            'title' => $this->post->title,
+            'body' => $this->post->body,
+        ];
 
-            $data = [
-                'post_id' => $this->post->id,
-                'title' => $this->post->title,
-                'body' => $this->post->body,
-            ];
+        $response = Http::timeout(10)
+        ->withHeaders([
+            'Content-Type' => 'application/json',
+            'x-api-key' => 'test_key',
+        ])->post($url, $data);
 
-            // http timeout
-            $response = Http::timeout(10)
-            ->withHeaders([
-                'Content-Type' => 'application/json',
-            ])->post($url, $data);
+        Log::info($response);
+        $statusCode = $response->getStatusCode();
+        $body = $response->getBody();
+        Log::info($statusCode);
+        Log::info($body);
 
-            Log::info('Webhook job: end');
-        } catch (Exception $e) {
-            Log::info('Webhook job: exception');
-        }
+        // if ($response->failed()) {
+        //     // エラー情報を取得
+        //     $error = $response->body(); // レスポンスボディの取得
+        //     Log::error("Request failed with response: $error");
+        // }
 
+        Log::info('Webhook job: end');
     }
 
     public function failed(\Exception $exception)

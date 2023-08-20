@@ -35,8 +35,12 @@ class PostController extends Controller
         $post->body = $request->body;
         $post->save();
 
-        Log::info('PostController::store ');
-        Webhook::dispatch($post);
+        Log::debug('PostController::store()');
+        try {
+            Webhook::dispatch($post);
+        } catch (Exception $e){
+
+        }
 
         return redirect()
             ->route('posts.index');
@@ -61,6 +65,9 @@ class PostController extends Controller
 
     public function destroy(Post $post)
     {
+        Log::error('PostController::destroy()');
+        Log::info($post);
+
         $post->delete();
 
         return redirect()
