@@ -126,6 +126,11 @@ return [
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
         ],
+
+        'recoveryWebhook' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/recovery-webhook.log'),
+        ]
     ],
 
 ];
