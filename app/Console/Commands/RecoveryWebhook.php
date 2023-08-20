@@ -29,35 +29,42 @@ class RecoveryWebhook extends Command
     {
         Log::channel('recoveryWebhook')->info('start recovery webhook script');
 
-        //ログファイルを選択
-        $dir = '';
         $now = new Carbon();
         $today = $now->format('Y-m-d');
-        $laravelLogFilePath = storage_path("logs/laravel-{$today}.log");
-        if (!file_exists($laravelLogFilePath)) {
+        $recoveryLogFilePath = storage_path("logs/recovery-webhook-{$today}.log");
+        if (!file_exists($recoveryLogFilePath)) {
             Log::channel('recoveryWebhook')->info('file not exist');
         }
 
-        Log::channel('recoveryWebhook')->info($laravelLogFilePath);
-
-        // 読み込んで、POSTデータの取得
-
         // 直近2時間分のログを取得と仮定
         // 探索範囲は定数にする
-        $searchRangeTimestamp = Carbon::now()->subHours(2)->timestamp;
+        $searchRangeHours = 1;
+        $searchRangeTimestamp = Carbon::now()->subHours($searchRangeHours)->timestamp;
 
         $pattern = '/\[(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})\]/';
-        $handle = fopen($laravelLogFilePath, 'r');
+        $handle = fopen($recoveryLogFilePath, 'r');
         if ($handle) {
             while(($line = fgets($handle)) !== false) {
                 if (preg_match($pattern, $line, $matches)) {
                     $logTimestamp = Carbon::parse($matches[1])->timestamp;
-                    if ($logTimestamp >= $searchRangeTimestamp) {
-
-                        //todo エラーの場合データを取得
-                        Log::channel('recoveryWebhook')->info($line);
+                    if ($logTimestamp < $searchRangeTimestamp) {
+                        // 対象期間より前のログのためスキップ
+                        continue;
                     }
+                } else {
+                    // 日時の部分がマッチしないためスキップ
+                    continue;
                 }
+
+                $jsonPart = strstr($line, '{');
+                if ($jsonPart === false) {
+                    continue;
+                }
+
+                $decodedRecoveryData = json_decode($jsonPart, true);
+                Log::channel('recoveryWebhook')->info($decodedRecoveryData);
+
+                // ジョブの再実施
             }
             fclose($handle);
         } else {

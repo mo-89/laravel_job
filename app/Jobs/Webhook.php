@@ -44,17 +44,31 @@ class Webhook implements ShouldQueue
             'body' => $this->post->body,
         ];
 
+        $key = 'test_key';
         $response = Http::timeout(10)
         ->withHeaders([
             'Content-Type' => 'application/json',
-            'x-api-key' => 'test_key',
+            'x-api-key' => $key,
         ])->post($url, $data);
 
         Log::info($response);
         $statusCode = $response->getStatusCode();
         $body = $response->getBody();
-        Log::info($statusCode);
-        Log::info($body);
+        // Log::info($statusCode);
+        // Log::info($body);
+
+        if ($response->successful()) {
+            $recoveryData = json_encode([
+                // 'type' => 'recovery_webhook_target',
+                'endpoint_url' => $url,
+                'api_key' => $key,
+                'data' => $data,
+            ]);
+
+            // ジョブ実施でエラーになれば、復旧ログに出力
+            Log::channel('recoveryWebhook')->info($recoveryData);
+
+        }
 
         // if ($response->failed()) {
         //     // エラー情報を取得
