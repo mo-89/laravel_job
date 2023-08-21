@@ -7,6 +7,8 @@ use App\Models\Post;
 use App\Http\Requests\PostRequest;
 use App\Jobs\Webhook;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Http\Client\ConnectionException;
+// use GuzzleHttp\Exception\ConnectException;
 
 class PostController extends Controller
 {
@@ -38,8 +40,30 @@ class PostController extends Controller
         Log::debug('PostController::store()');
         try {
             Webhook::dispatch($post);
-        } catch (Exception $e){
+        } catch (ConnectException $e){
+            // 例外でキャッチできない
+            Log::channel('recoveryWebhook')->info('接続例外');
+            // 接続できない例外時も復旧用ログファイルに出力
+            // webhook情報はどうやって取得するか？
+            //   -> dispatchを設定情報でループしてるから、そこから取得できそう
+            // Postを渡してOKか？
 
+            $recoveryData = json_encode([
+                // 'endpoint_url' => $url,
+                // 'api_key' => $key,
+                'data' => $post,
+            ]);
+
+            // ジョブ実施でエラーになれば、復旧ログに出力
+            Log::channel('recoveryWebhook')->info($recoveryData);
+
+        } catch (Exception $e){
+            // その他のエラー処理
+            Log::channel('recoveryWebhook')->info('その他の例外');
+
+
+            // ジョブ実施でエラーになれば、復旧ログに出力
+            Log::channel('recoveryWebhook')->info($recoveryData);
         }
 
         return redirect()

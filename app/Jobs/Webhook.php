@@ -45,11 +45,13 @@ class Webhook implements ShouldQueue
         ];
 
         $key = 'test_key';
-        $response = Http::timeout(10)
+        // $key = 'false';
+        $response = Http::timeout(5)
         ->withHeaders([
             'Content-Type' => 'application/json',
             'x-api-key' => $key,
-        ])->post($url, $data);
+        ])->post($url, $data)
+        ->throw();
 
         Log::info($response);
         $statusCode = $response->getStatusCode();
@@ -57,9 +59,8 @@ class Webhook implements ShouldQueue
         // Log::info($statusCode);
         // Log::info($body);
 
-        if ($response->successful()) {
+        if (!$response->successful()) {
             $recoveryData = json_encode([
-                // 'type' => 'recovery_webhook_target',
                 'endpoint_url' => $url,
                 'api_key' => $key,
                 'data' => $data,
